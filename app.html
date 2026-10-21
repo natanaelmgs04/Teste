@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arkitetum.ai — App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f7f4ef; --surface: #ffffff; --ink: #1c1a18;
+      --muted: #6b6560; --accent: #b87333; --accent2: #2d6a5e;
+      --border: #e4dfd8; --radius: 14px; --shadow: 0 4px 24px rgba(28,26,24,.08);
+      --sidebar: 240px;
+    }
+    html, body { height: 100%; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; }
+
+    /* ── ONBOARDING ── */
+    #onboarding {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 2rem; background: var(--bg);
+    }
+    .onb-card {
+      background: var(--surface); border-radius: 24px; padding: 3rem;
+      max-width: 460px; width: 100%; box-shadow: var(--shadow); border: 1px solid var(--border);
+    }
+    .onb-logo { font-weight: 700; font-size: 1.3rem; margin-bottom: 2rem; }
+    .onb-logo span { color: var(--accent); }
+    .onb-step { display: none; }
+    .onb-step.active { display: block; }
+    .onb-title { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 600; margin-bottom: .5rem; }
+    .onb-sub { color: var(--muted); font-size: .9rem; margin-bottom: 2rem; }
+    .role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .role-opt {
+      border: 2px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1rem;
+      text-align: center; cursor: pointer; transition: all .2s;
+    }
+    .role-opt:hover, .role-opt.selected { border-color: var(--accent); background: rgba(184,115,51,.05); }
+    .role-opt .icon { font-size: 2rem; margin-bottom: .5rem; }
+    .role-opt .label { font-weight: 600; font-size: .95rem; }
+    .role-opt .desc { font-size: .78rem; color: var(--muted); margin-top: .25rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .4rem; color: var(--ink); }
+    input, select, textarea {
+      width: 100%; padding: .7rem 1rem; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: .9rem; font-family: 'Inter', sans-serif; background: var(--bg);
+      color: var(--ink); outline: none; transition: border-color .2s; margin-bottom: 1rem;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); background: #fff; }
+    .style-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+    .chip {
+      padding: .4rem .9rem; border-radius: 50px; border: 1.5px solid var(--border);
+      font-size: .8rem; cursor: pointer; transition: all .2s; font-weight: 500;
+    }
+    .chip.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .chip:hover:not(.sel) { border-color: var(--accent); color: var(--accent); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: .7rem 1.5rem; border-radius: 50px; font-size: .9rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all .2s; border: none; }
+    .btn-primary { background: var(--ink); color: #fff; width: 100%; }
+    .btn-primary:hover { background: #333; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: #a06428; }
+    .btn-green { background: var(--accent2); color: #fff; }
+    .btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--ink); }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .progress { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 2rem; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+    .onb-nav { display: flex; gap: .75rem; margin-top: 1rem; }
+
+    /* ── APP SHELL ── */
+    #app { display: none; flex: 1; min-height: 100vh; }
+    .app-layout { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar); background: var(--ink); color: #fff;
+      display: flex; flex-direction: column; padding: 1.5rem 0; flex-shrink: 0;
+      position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
+    }
+    .sidebar-logo { padding: 0 1.25rem 1.5rem; font-weight: 700; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 1rem; }
+    .sidebar-logo span { color: var(--accent); }
+    .sidebar-user { padding: .75rem 1.25rem 1rem; margin-bottom: .5rem; }
+    .sidebar-user .uname { font-size: .875rem; font-weight: 600; }
+    .sidebar-user .urole { font-size: .75rem; color: rgba(255,255,255,.45); margin-top: .1rem; }
+    .nav-item {
+      display: flex; align-items: center; gap: .75rem; padding: .65rem 1.25rem;
+      font-size: .875rem; color: rgba(255,255,255,.55); cursor: pointer;
+      transition: all .15s; border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.05); color: #fff; }
+    .nav-item.active { background: rgba(255,255,255,.07); color: #fff; border-left-color: var(--accent); }
+    .nav-item .icon { font-size: 1.1rem; width: 20px; text-align: center; }
+    .sidebar-footer { margin-top: auto; padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,.08); }
+    .sidebar-footer a { font-size: .8rem; color: rgba(255,255,255,.4); text-decoration: none; display: block; padding: .4rem 0; transition: color .2s; }
+    .sidebar-footer a:hover { color: #fff; }
+
+    /* MAIN */
+    .main { margin-left: var(--sidebar); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 2rem; height: 60px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 40;
+    }
+    .topbar-title { font-weight: 600; font-size: 1rem; }
+    .topbar-right { display: flex; align-items: center; gap: 1rem; }
+    .notif-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--muted); position: relative; }
+    .notif-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; }
+    .avatar-sm { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #e8a96a); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .75rem; color: #fff; cursor: pointer; }
+    .content { padding: 2rem; flex: 1; }
+
+    /* ── SCREENS ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* Dashboard */
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+    .page-head h1 { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 600; }
+    .page-head p { color: var(--muted); font-size: .875rem; margin-top: .25rem; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: var(--surface); border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      border: 1px solid var(--border);
+    }
+    .stat-card .slabel { font-size: .78rem; color: var(--muted); font-weight: 500; margin-bottom: .4rem; }
+    .stat-card .sval { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+    .stat-card .sdelta { font-size: .75rem; color: var(--accent2); margin-top: .25rem; font-weight: 500; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+    .card-head { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-head h3 { font-size: .95rem; font-weight: 600; }
+    .card-body { padding: 1.25rem 1.5rem; }
+    .activity-item { display: flex; align-items: center; gap: .75rem; padding: .6rem 0; border-bottom: 1px solid var(--border); }
+    .activity-item:last-child { border-bottom: none; }
+    .act-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: .95rem; flex-shrink: 0; }
+    .act-text { flex: 1; }
+    .act-title { font-size: .85rem; font-weight: 500; }
+    .act-sub { font-size: .75rem; color: var(--muted); margin-top: .1rem; }
+    .act-time { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+    .badge { display: inline-flex; padding: .2rem .65rem; border-radius: 50px; font-size: .72rem; font-weight: 600; }
+    .badge-green { background: #ecf8f5; color: var(--accent2); }
+    .badge-amber { background: #fff8ec; color: var(--accent); }
+    .badge-blue { background: #ecf4fe; color: #3b7dd8; }
+    .badge-gray { background: var(--bg); color: var(--muted); }
+
+    /* Matches screen */
+    .matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+    .match-card-full {
+      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+      overflow: hidden; transition: transform .2s, box-shadow .2s; cursor: pointer;
+    }
+    .match-card-full:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .mc-header { height: 80px; position: relative; }
+    .mc-header.c1 { background: linear-gradient(135deg, #b87333, #e8a96a); }
+    .mc-header.c2 { background: linear-gradient(135deg, #2d6a5e, #4a9e8e); }
+    .mc-header.c3 { background: linear-gradient(135deg, #7c6bbf, #b09de0); }
+    .mc-header.c4 { background: linear-gradient(135deg, #4a7cb5, #89b4e0); }
+    .mc-header.c5 { background: linear-gradient(135deg, #8b5e3c, #c4956a); }
+    .mc-header.c6 { background: linear-gradient(135deg, #4a8b6e, #7dc4a6); }
+    .mc-avatar {
+      position: absolute; bottom: -20px; left: 1.25rem;
+      width: 46px; height: 46px; border-radius: 50%; background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .95rem; border: 3px solid #fff; color: var(--ink);
+    }
+    .mc-pct {
+      position: absolute; top: .75rem; right: .75rem;
+      background: rgba(255,255,255,.9); border-radius: 50px;
+      font-size: .75rem; font-weight: 700; padding: .2rem .6rem; color: var(--ink);
+    }
+    .mc-body { padding: 1.5rem 1.25rem 1.25rem; }
+    .mc-name { font-weight: 700; font-size: 1rem; margin-bottom: .2rem; }
+    .mc-spec { font-size: .78rem; color: var(--muted); margin-bottom: .75rem; }
+    .mc-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
+    .mc-tag { font-size: .7rem; background: var(--bg); color: var(--muted); padding: .2rem .55rem; border-radius: 50px; }
+    .pct-bar2 { height: 5px; background: var(--border); border-radius: 3px; margin-bottom: 1rem; }
+    .pct-fill2 { height: 100%; border-radius: 3px; background: var(--accent2); }
+
+    /* AI assistant */
+    .ai-chat-wrap { display: grid; grid-template-columns: 1fr 300px; gap: 1.25rem; height: calc(100vh - 160px); }
+    .chat-area { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); display: flex; flex-direction: column; }
+    .chat-messages { flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+    .msg { max-width: 75%; }
+    .msg.user { align-self: flex-end; }
+    .msg.bot { align-self: flex-start; }
+    .msg-bubble { padding: .75rem 1rem; border-radius: 16px; font-size: .875rem; line-height: 1.55; }
+    .msg.user .msg-bubble { background: var(--ink); color: #fff; border-bottom-right-radius: 4px; }
+    .msg.bot .msg-bubble { background: var(--bg); color: var(--ink); border-bottom-left-radius: 4px; }
+    .msg-bubble strong { color: var(--accent); }
+    .msg-time { font-size: .7rem; color: var(--muted); margin-top: .3rem; text-align: right; }
+    .msg.bot .msg-time { text-align: left; }
+    .chat-input-area { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; }
+    .chat-input {
+      flex: 1; padding: .65rem 1rem; border: 1.5px solid var(--border); border-radius: 50px;
+      font-size: .875rem; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink);
+      outline: none; transition: border-color .2s;
+    }
+    .chat-input:focus { border-color: var(--accent); background: #fff; }
+    .send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 1rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background .2s; }
+    .send-btn:hover { background: #a06428; }
+    .chat-sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+    .quick-prompts-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.25rem; }
+    .qp-title { font-weight: 600; font-size: .875rem; margin-bottom: 1rem; }
+    .qp-item { background: var(--bg); border-radius: 10px; padding: .65rem .9rem; font-size: .8rem; cursor: pointer; margin-bottom: .5rem; transition: all .2s; border: 1px solid transparent; color: var(--ink); }
+    .qp-item:hover { border-color: var(--accent); color: var(--accent); }
+    .typing { display: flex; gap: .3rem; align-items: center; padding: .75rem 1rem; }
+    .typing span { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); animation: bounce .9s infinite; }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
+
+    /* Projects screen */
+    .projects-list { display: flex; flex-direction: column; gap: .75rem; }
+    .project-row {
+      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1.25rem;
+      transition: box-shadow .2s; cursor: pointer;
+    }
+    .project-row:hover { box-shadow: var(--shadow); }
+    .proj-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .proj-info { flex: 1; }
+    .proj-name { font-weight: 600; font-size: .95rem; }
+    .proj-client { font-size: .8rem; color: var(--muted); margin-top: .15rem; }
+    .proj-right { display: flex; align-items: center; gap: 1.25rem; }
+    .proj-progress { width: 100px; }
+    .proj-progress .label { font-size: .72rem; color: var(--muted); margin-bottom: .3rem; display: flex; justify-content: space-between; }
+    .proj-progress .bar { height: 6px; background: var(--border); border-radius: 3px; }
+    .proj-progress .fill { height: 100%; border-radius: 3px; background: var(--accent2); }
+
+    /* Profile */
+    .profile-grid { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
+    .profile-sidebar-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 2rem; text-align: center; }
+    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #e8a96a); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.8rem; color: #fff; margin: 0 auto 1rem; }
+    .profile-name { font-weight: 700; font-size: 1.1rem; margin-bottom: .25rem; }
+    .profile-role { font-size: .82rem; color: var(--muted); margin-bottom: 1.25rem; }
+    .profile-stat { display: flex; justify-content: space-around; padding: 1rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+    .pstat .num { font-size: 1.2rem; font-weight: 700; }
+    .pstat .lbl { font-size: .72rem; color: var(--muted); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { margin-bottom: 1.25rem; }
+
+    /* Mobile toggle */
+    .mobile-nav-toggle { display: none; }
+
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .grid2 { grid-template-columns: 1fr; }
+      .ai-chat-wrap { grid-template-columns: 1fr; }
+      .chat-sidebar { display: none; }
+      .profile-grid { grid-template-columns: 1fr; }
+      .sidebar { transform: translateX(-100%); transition: transform .3s; }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .mobile-nav-toggle { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: none; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── ONBOARDING ── -->
+<div id="onboarding">
+  <div class="onb-card">
+    <div class="onb-logo">Arkitetum<span>.ai</span></div>
+    <div class="progress"><div class="progress-fill" id="prog" style="width:33%"></div></div>
+
+    <!-- Step 1: role -->
+    <div class="onb-step active" id="step1">
+      <div class="onb-title">Bem-vindo!</div>
+      <div class="onb-sub">Como você vai usar a plataforma?</div>
+      <div class="role-options">
+        <div class="role-opt" id="opt-cliente" onclick="selectRole('cliente')">
+          <div class="icon">🏠</div>
+          <div class="label">Sou cliente</div>
+          <div class="desc">Quero encontrar um arquiteto</div>
+        </div>
+        <div class="role-opt" id="opt-arquiteto" onclick="selectRole('arquiteto')">
+          <div class="icon">📐</div>
+          <div class="label">Sou arquiteto</div>
+          <div class="desc">Quero usar a IA no meu trabalho</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="goStep(2)">Continuar →</button>
+    </div>
+
+    <!-- Step 2: profile -->
+    <div class="onb-step" id="step2">
+      <div class="onb-title" id="step2-title">Seu perfil</div>
+      <div class="onb-sub" id="step2-sub">Vamos personalizar sua experiência.</div>
+      <div class="form-group">
+        <label>Nome completo</label>
+        <input type="text" placeholder="Ex: Ana Oliveira" id="inp-name" />
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" placeholder="seu@email.com" />
+      </div>
+      <div id="cliente-extra">
+        <div class="form-group">
+          <label>Tipo de projeto</label>
+          <select>
+            <option>Residencial — apartamento</option>
+            <option>Residencial — casa</option>
+            <option>Comercial — escritório</option>
+            <option>Comercial — loja / restaurante</option>
+            <option>Reforma</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Orçamento estimado</label>
+          <select>
+            <option>Até R$ 30.000</option>
+            <option>R$ 30k – R$ 80k</option>
+            <option>R$ 80k – R$ 200k</option>
+            <option>Acima de R$ 200k</option>
+          </select>
+        </div>
+      </div>
+      <div id="arq-extra" style="display:none">
+        <div class="form-group">
+          <label>Especialidade principal</label>
+          <select>
+            <option>Interiores</option>
+            <option>Residencial</option>
+            <option>Comercial</option>
+            <option>Sustentável / Biofílico</option>
+            <option>Alto padrão</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Anos de experiência</label>
+          <select>
+            <option>Menos de 2 anos</option>
+            <option>2–5 anos</option>
+            <option>5–10 anos</option>
+            <option>Mais de 10 anos</option>
+          </select>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost" onclick="goStep(1)" style="flex:1">← Voltar</button>
+        <button class="btn btn-primary" onclick="goStep(3)" style="flex:2">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: style -->
+    <div class="onb-step" id="step3">
+      <div class="onb-title" id="step3-title">Estilo &amp; preferências</div>
+      <div class="onb-sub" id="step3-sub">Selecione os estilos que combinam com você.</div>
+      <div class="style-chips">
+        <span class="chip" onclick="toggleChip(this)">Contemporâneo</span>
+        <span class="chip" onclick="toggleChip(this)">Minimalista</span>
+        <span class="chip" onclick="toggleChip(this)">Industrial</span>
+        <span class="chip" onclick="toggleChip(this)">Biofílico</span>
+        <span class="chip" onclick="toggleChip(this)">Rústico</span>
+        <span class="chip" onclick="toggleChip(this)">Escandinavo</span>
+        <span class="chip" onclick="toggleChip(this)">Clássico</span>
+        <span class="chip" onclick="toggleChip(this)">Cimento queimado</span>
+        <span class="chip" onclick="toggleChip(this)">Madeira</span>
+        <span class="chip" onclick="toggleChip(this)">Luz natural</span>
+        <span class="chip" onclick="toggleChip(this)">Sustentável</span>
+        <span class="chip" onclick="toggleChip(this)">Alto padrão</span>
+      </div>
+      <div id="arq-portfolio" style="display:none">
+        <label>Link do portfólio / Instagram</label>
+        <input type="url" placeholder="https://..." />
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost" onclick="goStep(2)" style="flex:1">← Voltar</button>
+        <button class="btn btn-accent" onclick="launchApp()" style="flex:2">Entrar na plataforma ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">Arkitetum<span>.ai</span></div>
+      <div class="sidebar-user">
+        <div class="uname" id="sidebar-name">Carregando...</div>
+        <div class="urole" id="sidebar-role">—</div>
+      </div>
+
+      <!-- Cliente nav -->
+      <div id="nav-cliente">
+        <div class="nav-item active" onclick="showScreen('dashboard')"><span class="icon">🏠</span> Dashboard</div>
+        <div class="nav-item" onclick="showScreen('matches')"><span class="icon">🎯</span> Meus Matches</div>
+        <div class="nav-item" onclick="showScreen('projetos')"><span class="icon">📁</span> Meus Projetos</div>
+        <div class="nav-item" onclick="showScreen('ia')"><span class="icon">🤖</span> Assistente IA</div>
+        <div class="nav-item" onclick="showScreen('perfil')"><span class="icon">👤</span> Perfil</div>
+      </div>
+
+      <!-- Arquiteto nav -->
+      <div id="nav-arquiteto" style="display:none">
+        <div class="nav-item active" onclick="showScreen('dashboard')"><span class="icon">🏠</span> Dashboard</div>
+        <div class="nav-item" onclick="showScreen('projetos')"><span class="icon">📁</span> Projetos</div>
+        <div class="nav-item" onclick="showScreen('matches')"><span class="icon">🎯</span> Leads / Matches</div>
+        <div class="nav-item" onclick="showScreen('ia')"><span class="icon">🤖</span> IA Criativa</div>
+        <div class="nav-item" onclick="showScreen('materiais')"><span class="icon">🏗️</span> Materiais</div>
+        <div class="nav-item" onclick="showScreen('perfil')"><span class="icon">👤</span> Perfil</div>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="index.html">← Voltar ao site</a>
+        <a href="#" onclick="resetApp()">Sair</a>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <button class="mobile-nav-toggle" onclick="toggleSidebar()">☰</button>
+          <div class="topbar-title" id="topbar-title">Dashboard</div>
+        </div>
+        <div class="topbar-right">
+          <button class="notif-btn">🔔<span class="notif-dot"></span></button>
+          <div class="avatar-sm" id="topbar-avatar">?</div>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div class="screen active" id="screen-dashboard">
+          <div class="page-head">
+            <div>
+              <h1 id="dash-greeting">Olá!</h1>
+              <p id="dash-sub">Veja o resumo da sua plataforma.</p>
+            </div>
+            <button class="btn btn-accent" id="dash-cta" onclick="showScreen('matches')">Ver matches →</button>
+          </div>
+          <div class="stats-row" id="dash-stats"></div>
+          <div class="grid2">
+            <div class="card">
+              <div class="card-head"><h3>Atividade recente</h3><span class="badge badge-gray">Hoje</span></div>
+              <div class="card-body" id="dash-activity"></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3 id="dash-card2-title">Sugestão da IA</h3></div>
+              <div class="card-body" id="dash-card2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MATCHES -->
+        <div class="screen" id="screen-matches">
+          <div class="page-head">
+            <div>
+              <h1 id="matches-title">Seus Matches</h1>
+              <p id="matches-sub">Arquitetos compatíveis com seu perfil e preferências.</p>
+            </div>
+            <button class="btn btn-ghost" onclick="showScreen('ia')">🤖 Pedir sugestão à IA</button>
+          </div>
+          <div class="matches-grid" id="matches-grid"></div>
+        </div>
+
+        <!-- PROJETOS -->
+        <div class="screen" id="screen-projetos">
+          <div class="page-head">
+            <div><h1>Projetos</h1><p id="proj-sub">Acompanhe o andamento de cada projeto.</p></div>
+            <button class="btn btn-accent">+ Novo projeto</button>
+          </div>
+          <div class="projects-list" id="projects-list"></div>
+        </div>
+
+        <!-- IA -->
+        <div class="screen" id="screen-ia">
+          <div class="page-head">
+            <div><h1>Assistente IA</h1><p>Gere conceitos, paletas e referências em segundos.</p></div>
+          </div>
+          <div class="ai-chat-wrap">
+            <div class="chat-area">
+              <div class="chat-messages" id="chat-messages">
+                <div class="msg bot">
+                  <div class="msg-bubble">
+                    Olá! Sou o assistente da Arkitetum.ai. 👋<br><br>
+                    Posso gerar conceitos de projeto, sugerir paletas de cores, materiais e referências visuais. <strong>Como posso ajudar hoje?</strong>
+                  </div>
+                  <div class="msg-time">agora</div>
+                </div>
+              </div>
+              <div class="chat-input-area">
+                <input class="chat-input" id="chat-input" placeholder="Descreva seu projeto ou dúvida..." onkeydown="if(event.key==='Enter')sendMsg()" />
+                <button class="send-btn" onclick="sendMsg()">➤</button>
+              </div>
+            </div>
+            <div class="chat-sidebar">
+              <div class="quick-prompts-card">
+                <div class="qp-title">💡 Sugestões rápidas</div>
+                <div class="qp-item" onclick="usePrompt(this)">Gerar conceito para apartamento 80m² contemporâneo</div>
+                <div class="qp-item" onclick="usePrompt(this)">Paleta de cores para escritório minimalista</div>
+                <div class="qp-item" onclick="usePrompt(this)">Materiais para projeto biofílico residencial</div>
+                <div class="qp-item" onclick="usePrompt(this)">Referências de cimento queimado + madeira</div>
+              </div>
+              <div class="quick-prompts-card">
+                <div class="qp-title">📌 Histórico</div>
+                <div style="font-size:.8rem;color:var(--muted)">Conceito Urban Warmth<br><span style="font-size:.72rem">Ontem, 14:32</span></div>
+                <div style="font-size:.8rem;color:var(--muted);margin-top:.75rem">Paleta Loft Industrial<br><span style="font-size:.72rem">Dom, 10:15</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MATERIAIS (arquiteto) -->
+        <div class="screen" id="screen-materiais">
+          <div class="page-head">
+            <div><h1>Banco de Materiais</h1><p>Seus fornecedores e materiais preferidos.</p></div>
+            <button class="btn btn-accent">+ Adicionar material</button>
+          </div>
+          <div class="grid2">
+            <div class="card">
+              <div class="card-head"><h3>Fornecedores cadastrados</h3><span class="badge badge-green">12 ativos</span></div>
+              <div class="card-body">
+                <div class="activity-item"><div class="act-icon">🪵</div><div class="act-text"><div class="act-title">Madeirite Ateliê</div><div class="act-sub">Madeiras de demolição · SP</div></div><span class="badge badge-green">Preferido</span></div>
+                <div class="activity-item"><div class="act-icon">🪨</div><div class="act-text"><div class="act-title">Concreto Arte</div><div class="act-sub">Cimento queimado · RJ</div></div><span class="badge badge-amber">Parceiro</span></div>
+                <div class="activity-item"><div class="act-icon">🌿</div><div class="act-text"><div class="act-title">Plantô Verde</div><div class="act-sub">Paisagismo e vegetação · SP</div></div><span class="badge badge-green">Preferido</span></div>
+                <div class="activity-item"><div class="act-icon">💡</div><div class="act-text"><div class="act-title">Lumini Lighting</div><div class="act-sub">Iluminação · Nacional</div></div><span class="badge badge-blue">Novo</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Materiais em uso</h3></div>
+              <div class="card-body">
+                <div class="activity-item"><div class="act-icon">🟤</div><div class="act-text"><div class="act-title">Cimento queimado natural</div><div class="act-sub">Pisos e paredes · 3 projetos</div></div></div>
+                <div class="activity-item"><div class="act-icon">🟫</div><div class="act-text"><div class="act-title">Madeira freijó</div><div class="act-sub">Marcenaria · 5 projetos</div></div></div>
+                <div class="activity-item"><div class="act-icon">⬜</div><div class="act-text"><div class="act-title">Porcelanato 120x60 branco</div><div class="act-sub">Pisos · 2 projetos</div></div></div>
+                <div class="activity-item"><div class="act-icon">🔩</div><div class="act-text"><div class="act-title">Perfil de aço preto</div><div class="act-sub">Estrutura e detalhes · 4 projetos</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERFIL -->
+        <div class="screen" id="screen-perfil">
+          <div class="page-head"><div><h1>Perfil</h1><p>Suas informações e configurações.</p></div></div>
+          <div class="profile-grid">
+            <div>
+              <div class="profile-sidebar-card">
+                <div class="profile-avatar" id="prof-avatar">?</div>
+                <div class="profile-name" id="prof-name">—</div>
+                <div class="profile-role" id="prof-role">—</div>
+                <div class="profile-stat">
+                  <div class="pstat"><div class="num" id="pstat1">—</div><div class="lbl" id="pstat1l">—</div></div>
+                  <div class="pstat"><div class="num" id="pstat2">—</div><div class="lbl" id="pstat2l">—</div></div>
+                  <div class="pstat"><div class="num" id="pstat3">—</div><div class="lbl" id="pstat3l">—</div></div>
+                </div>
+                <button class="btn btn-ghost" style="width:100%">Editar foto</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Informações pessoais</h3><button class="btn btn-ghost" style="padding:.4rem 1rem;font-size:.8rem">Salvar</button></div>
+              <div class="card-body">
+                <div class="form-row">
+                  <div class="form-group"><label>Nome</label><input type="text" id="prof-inp-name" /></div>
+                  <div class="form-group"><label>E-mail</label><input type="email" value="usuario@email.com" /></div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group"><label>Telefone</label><input type="tel" placeholder="(11) 99999-9999" /></div>
+                  <div class="form-group"><label>Cidade</label><input type="text" placeholder="São Paulo, SP" /></div>
+                </div>
+                <div class="form-group"><label>Bio</label><textarea rows="3" placeholder="Conte um pouco sobre você..."></textarea></div>
+                <div class="form-group">
+                  <label>Estilos favoritos</label>
+                  <div class="style-chips" id="prof-chips"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /main -->
+  </div><!-- /app-layout -->
+</div><!-- /app -->
+
+<script>
+// ── STATE ──
+let role = 'cliente';
+let userName = 'Usuário';
+
+// ── ONBOARDING ──
+function selectRole(r) {
+  role = r;
+  document.getElementById('opt-cliente').classList.toggle('selected', r === 'cliente');
+  document.getElementById('opt-arquiteto').classList.toggle('selected', r === 'arquiteto');
+}
+
+function goStep(n) {
+  document.querySelectorAll('.onb-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  document.getElementById('prog').style.width = (n / 3 * 100) + '%';
+  if (n === 2) {
+    document.getElementById('cliente-extra').style.display = role === 'cliente' ? '' : 'none';
+    document.getElementById('arq-extra').style.display = role === 'arquiteto' ? '' : 'none';
+    document.getElementById('step2-title').textContent = role === 'cliente' ? 'Seu projeto' : 'Seu perfil profissional';
+    document.getElementById('step2-sub').textContent = role === 'cliente' ? 'Nos conte sobre o que você precisa.' : 'Como os clientes vão te encontrar.';
+  }
+  if (n === 3) {
+    document.getElementById('step3-title').textContent = role === 'cliente' ? 'Seu estilo' : 'Seu repertório';
+    document.getElementById('step3-sub').textContent = role === 'cliente' ? 'Que estilos te inspiram?' : 'Com quais estilos você mais trabalha?';
+    document.getElementById('arq-portfolio').style.display = role === 'arquiteto' ? '' : 'none';
+  }
+}
+
+function toggleChip(el) { el.classList.toggle('sel'); }
+
+function launchApp() {
+  const inp = document.getElementById('inp-name');
+  userName = (inp && inp.value.trim()) || (role === 'cliente' ? 'Ana Oliveira' : 'Marcos Arquiteto');
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initApp();
+}
+
+// Check URL params for direct entry
+const params = new URLSearchParams(location.search);
+if (params.get('tipo')) {
+  role = params.get('tipo') === 'arquiteto' ? 'arquiteto' : 'cliente';
+  selectRole(role);
+}
+
+// ── APP INIT ──
+function initApp() {
+  const initials = userName.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('sidebar-name').textContent = userName;
+  document.getElementById('sidebar-role').textContent = role === 'cliente' ? 'Cliente' : 'Arquiteto';
+  document.getElementById('topbar-avatar').textContent = initials;
+  document.getElementById('prof-avatar').textContent = initials;
+  document.getElementById('prof-name').textContent = userName;
+  document.getElementById('prof-inp-name').value = userName;
+  document.getElementById('nav-cliente').style.display = role === 'cliente' ? '' : 'none';
+  document.getElementById('nav-arquiteto').style.display = role === 'arquiteto' ? '' : 'none';
+
+  if (role === 'cliente') {
+    initClientDash();
+    initClientMatches();
+  } else {
+    initArchDash();
+    initArchMatches();
+  }
+  initProjects();
+  initProfile();
+  buildProfileChips();
+}
+
+function initClientDash() {
+  document.getElementById('dash-greeting').textContent = 'Olá, ' + userName.split(' ')[0] + '!';
+  document.getElementById('dash-sub').textContent = 'Encontramos ótimos arquitetos para você.';
+  document.getElementById('dash-cta').textContent = 'Ver matches →';
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="slabel">Matches encontrados</div><div class="sval">8</div><div class="sdelta">↑ 3 novos esta semana</div></div>
+    <div class="stat-card"><div class="slabel">Melhor compatibilidade</div><div class="sval">97%</div><div class="sdelta">Teresa Younes</div></div>
+    <div class="stat-card"><div class="slabel">Projetos ativos</div><div class="sval">1</div><div class="sdelta">Em andamento</div></div>
+    <div class="stat-card"><div class="slabel">Mensagens</div><div class="sval">3</div><div class="sdelta">2 não lidas</div></div>
+  `;
+  document.getElementById('dash-activity').innerHTML = `
+    <div class="activity-item"><div class="act-icon">🎯</div><div class="act-text"><div class="act-title">Teresa Younes visualizou seu briefing</div><div class="act-sub">Interiores · 97% match</div></div><div class="act-time">2h atrás</div></div>
+    <div class="activity-item"><div class="act-icon">💬</div><div class="act-text"><div class="act-title">Marcos Ribeiro enviou uma proposta</div><div class="act-sub">Residencial · 88% match</div></div><div class="act-time">5h atrás</div></div>
+    <div class="activity-item"><div class="act-icon">✅</div><div class="act-text"><div class="act-title">Briefing preenchido com sucesso</div><div class="act-sub">IA processou suas preferências</div></div><div class="act-time">Ontem</div></div>
+  `;
+  document.getElementById('dash-card2-title').textContent = 'Dica da IA';
+  document.getElementById('dash-card2').innerHTML = `
+    <p style="font-size:.875rem;color:var(--muted);margin-bottom:1rem">Com base no seu briefing, a IA identificou que você prefere <strong>ambientes com luz natural e materiais naturais</strong>. Teresa Younes tem 11 projetos com essas características.</p>
+    <button class="btn btn-accent btn-sm" onclick="showScreen('matches')" style="width:100%;padding:.6rem">Ver perfil completo →</button>
+  `;
+}
+
+function initArchDash() {
+  document.getElementById('dash-greeting').textContent = 'Olá, ' + userName.split(' ')[0] + '!';
+  document.getElementById('dash-sub').textContent = 'Sua IA está pronta para o trabalho.';
+  document.getElementById('dash-cta').textContent = 'Abrir IA →';
+  document.getElementById('dash-cta').onclick = () => showScreen('ia');
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="slabel">Projetos ativos</div><div class="sval">6</div><div class="sdelta">↑ 2 novos este mês</div></div>
+    <div class="stat-card"><div class="slabel">Novos leads</div><div class="sval">4</div><div class="sdelta">↑ Esta semana</div></div>
+    <div class="stat-card"><div class="slabel">Conceitos gerados</div><div class="sval">23</div><div class="sdelta">IA ativa</div></div>
+    <div class="stat-card"><div class="slabel">Taxa de conversão</div><div class="sval">68%</div><div class="sdelta">↑ +12% vs. mês anterior</div></div>
+  `;
+  document.getElementById('dash-activity').innerHTML = `
+    <div class="activity-item"><div class="act-icon">🎯</div><div class="act-text"><div class="act-title">Novo lead: Residencial 120m²</div><div class="act-sub">Estilo biofílico · orçamento R$80–200k</div></div><div class="act-time">1h atrás</div></div>
+    <div class="activity-item"><div class="act-icon">🤖</div><div class="act-text"><div class="act-title">IA gerou conceito "Urban Warmth"</div><div class="act-sub">Projeto Apartamento SP</div></div><div class="act-time">3h atrás</div></div>
+    <div class="activity-item"><div class="act-icon">✅</div><div class="act-text"><div class="act-title">Cliente aprovou proposta</div><div class="act-sub">Casa Campinas · R$ 145k</div></div><div class="act-time">Ontem</div></div>
+    <div class="activity-item"><div class="act-icon">💬</div><div class="act-text"><div class="act-title">2 mensagens não lidas</div><div class="act-sub">Clientes aguardando resposta</div></div><div class="act-time">Ontem</div></div>
+  `;
+  document.getElementById('dash-card2-title').textContent = 'Sugestão da IA';
+  document.getElementById('dash-card2').innerHTML = `
+    <p style="font-size:.875rem;color:var(--muted);margin-bottom:.75rem">Você tem um briefing novo que combina com seu estilo. A IA identificou 3 oportunidades de projeto esta semana.</p>
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+      <div style="background:var(--bg);border-radius:10px;padding:.65rem .9rem;font-size:.8rem"><strong>Apê 90m² · Contemporâneo</strong><br><span style="color:var(--muted)">Compatibilidade estimada: 94%</span></div>
+      <div style="background:var(--bg);border-radius:10px;padding:.65rem .9rem;font-size:.8rem"><strong>Casa 200m² · Biofílico</strong><br><span style="color:var(--muted)">Compatibilidade estimada: 88%</span></div>
+    </div>
+    <button class="btn btn-green" onclick="showScreen('matches')" style="width:100%;padding:.6rem;margin-top:.75rem">Ver leads →</button>
+  `;
+}
+
+const architects = [
+  { name:'Teresa Younes', initials:'TY', color:'c1', spec:'Interiores · Comercial · Residencial', pct:97, tags:['Contemporâneo','Cimento queimado','Teatros','Alto padrão'] },
+  { name:'Marcos Ribeiro', initials:'MR', color:'c2', spec:'Residencial · Alto padrão', pct:88, tags:['Minimalista','Madeira','Luz natural'] },
+  { name:'Carla Andrade', initials:'CA', color:'c3', spec:'Residencial · Sustentável', pct:81, tags:['Biofílico','Reformas','Verde'] },
+  { name:'Pedro Alves', initials:'PA', color:'c4', spec:'Comercial · Escritórios', pct:76, tags:['Industrial','Contemporâneo','Concreto'] },
+  { name:'Luísa Ferreira', initials:'LF', color:'c5', spec:'Interiores · Residencial', pct:72, tags:['Escandinavo','Madeira','Neutros'] },
+  { name:'Rafael Moura', initials:'RM', color:'c6', spec:'Residencial · Alto padrão', pct:68, tags:['Clássico','Mármore','Detalhes em dourado'] },
+];
+
+const leads = [
+  { name:'Ana Oliveira', initials:'AO', color:'c1', spec:'Apê 90m² · Contemporâneo', pct:94, tags:['Luz natural','Madeira','Neutros'] },
+  { name:'Bruno Costa', initials:'BC', color:'c2', spec:'Casa 200m² · Biofílico', pct:88, tags:['Verde','Pedra','Aberto'] },
+  { name:'Clara Rocha', initials:'CR', color:'c3', spec:'Escritório 60m² · Minimalista', pct:82, tags:['Industrial','Branco','Aço'] },
+  { name:'Diego Lima', initials:'DL', color:'c4', spec:'Apê 70m² · Industrial', pct:77, tags:['Concreto','Metal','Escuro'] },
+];
+
+function initClientMatches() {
+  const g = document.getElementById('matches-grid');
+  document.getElementById('matches-title').textContent = 'Seus Matches';
+  document.getElementById('matches-sub').textContent = 'Arquitetos compatíveis com seu perfil.';
+  g.innerHTML = architects.map(a => `
+    <div class="match-card-full">
+      <div class="mc-header ${a.color}">
+        <div class="mc-avatar">${a.initials}</div>
+        <div class="mc-pct">✦ ${a.pct}%</div>
+      </div>
+      <div class="mc-body">
+        <div class="mc-name">${a.name}</div>
+        <div class="mc-spec">${a.spec}</div>
+        <div class="mc-tags">${a.tags.map(t=>`<span class="mc-tag">${t}</span>`).join('')}</div>
+        <div class="pct-bar2"><div class="pct-fill2" style="width:${a.pct}%"></div></div>
+        <button class="btn btn-accent" style="width:100%;padding:.55rem">Ver perfil →</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function initArchMatches() {
+  const g = document.getElementById('matches-grid');
+  document.getElementById('matches-title').textContent = 'Leads & Matches';
+  document.getElementById('matches-sub').textContent = 'Clientes compatíveis com seu estilo de trabalho.';
+  g.innerHTML = leads.map(a => `
+    <div class="match-card-full">
+      <div class="mc-header ${a.color}">
+        <div class="mc-avatar">${a.initials}</div>
+        <div class="mc-pct">✦ ${a.pct}%</div>
+      </div>
+      <div class="mc-body">
+        <div class="mc-name">${a.name}</div>
+        <div class="mc-spec">${a.spec}</div>
+        <div class="mc-tags">${a.tags.map(t=>`<span class="mc-tag">${t}</span>`).join('')}</div>
+        <div class="pct-bar2"><div class="pct-fill2" style="width:${a.pct}%"></div></div>
+        <button class="btn btn-green" style="width:100%;padding:.55rem">Entrar em contato →</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+const projects = [
+  { name:'Apartamento Vila Madalena', client: role === 'cliente' ? 'Teresa Younes' : 'Ana Oliveira', color:'#b87333', status:'Em andamento', pct:65, badge:'badge-amber' },
+  { name:'Escritório Paulista', client: role === 'cliente' ? 'Pedro Alves' : 'Bruno Costa', color:'#2d6a5e', status:'Briefing', pct:20, badge:'badge-blue' },
+  { name:'Casa Campinas', client: role === 'cliente' ? 'Marcos Ribeiro' : 'Clara Rocha', color:'#7c6bbf', status:'Aprovação', pct:90, badge:'badge-green' },
+];
+
+function initProjects() {
+  document.getElementById('proj-sub').textContent = role === 'cliente' ? 'Acompanhe seus projetos em andamento.' : 'Gerencie os projetos do seu escritório.';
+  document.getElementById('projects-list').innerHTML = projects.map(p => `
+    <div class="project-row">
+      <div class="proj-color" style="background:${p.color}"></div>
+      <div class="proj-info">
+        <div class="proj-name">${p.name}</div>
+        <div class="proj-client">${role === 'cliente' ? 'Arquiteto: ' : 'Cliente: '} ${p.client}</div>
+      </div>
+      <div class="proj-right">
+        <div class="proj-progress">
+          <div class="label"><span>Progresso</span><span>${p.pct}%</span></div>
+          <div class="bar"><div class="fill" style="width:${p.pct}%;background:${p.color}"></div></div>
+        </div>
+        <span class="badge ${p.badge}">${p.status}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function initProfile() {
+  document.getElementById('prof-role').textContent = role === 'cliente' ? 'Cliente' : 'Arquiteto';
+  if (role === 'cliente') {
+    document.getElementById('pstat1').textContent = '3'; document.getElementById('pstat1l').textContent = 'Projetos';
+    document.getElementById('pstat2').textContent = '8'; document.getElementById('pstat2l').textContent = 'Matches';
+    document.getElementById('pstat3').textContent = '97%'; document.getElementById('pstat3l').textContent = 'Top match';
+  } else {
+    document.getElementById('pstat1').textContent = '6'; document.getElementById('pstat1l').textContent = 'Projetos';
+    document.getElementById('pstat2').textContent = '23'; document.getElementById('pstat2l').textContent = 'Conceitos';
+    document.getElementById('pstat3').textContent = '4.9'; document.getElementById('pstat3l').textContent = 'Avaliação';
+  }
+}
+
+function buildProfileChips() {
+  const styles = ['Contemporâneo','Minimalista','Biofílico','Luz natural','Madeira','Industrial'];
+  const c = document.getElementById('prof-chips');
+  c.innerHTML = styles.map((s,i) => `<span class="chip ${i<3?'sel':''}" onclick="toggleChip(this)">${s}</span>`).join('');
+}
+
+// ── NAVIGATION ──
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sc = document.getElementById('screen-' + name);
+  if (sc) sc.classList.add('active');
+  const titles = { dashboard:'Dashboard', matches: role==='arquiteto'?'Leads':'Matches', projetos:'Projetos', ia:'Assistente IA', materiais:'Materiais', perfil:'Perfil' };
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('active');
+  });
+  if (window.innerWidth < 900) document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ── AI CHAT ──
+const aiResponses = {
+  default: [
+    'Com base no seu portfólio, sugiro trabalhar com uma paleta de <strong>terracota + off-white + verde escuro</strong>. Esse trio está em alta e combina com seu estilo contemporâneo.',
+    'Para esse briefing, identifiquei <strong>3 conceitos</strong>: Urban Warmth (cimento + madeira), Light Loft (tons claros + estrutura exposta) e Green Touch (biofílico urbano). Qual deseja explorar?',
+    'Encontrei <strong>5 fornecedores</strong> do seu banco compatíveis com esse projeto: Madeirite Ateliê, Concreto Arte, Plantô Verde, Lumini e Vidraçaria São Paulo.',
+    'Analisando o briefing do cliente, os pontos-chave são: <strong>luz natural prioritária, espaço aberto, materiais naturais</strong>. Isso combina 94% com seu repertório de projetos anteriores.',
+  ]
+};
+let aiIdx = 0;
+
+function sendMsg() {
+  const inp = document.getElementById('chat-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  addMsg('user', text);
+  inp.value = '';
+  // Typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'msg bot'; typing.id = 'typing-ind';
+  typing.innerHTML = '<div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  document.getElementById('chat-messages').appendChild(typing);
+  scrollChat();
+  setTimeout(() => {
+    document.getElementById('typing-ind')?.remove();
+    const resp = aiResponses.default[aiIdx % aiResponses.default.length];
+    aiIdx++;
+    addMsg('bot', resp);
+  }, 1400);
+}
+
+function addMsg(type, text) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + type;
+  const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML = `<div class="msg-bubble">${text}</div><div class="msg-time">${now}</div>`;
+  document.getElementById('chat-messages').appendChild(d);
+  scrollChat();
+}
+
+function scrollChat() {
+  const c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+function usePrompt(el) {
+  document.getElementById('chat-input').value = el.textContent;
+  document.getElementById('chat-input').focus();
+}
+
+function resetApp() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'flex';
+  role = 'cliente'; userName = 'Usuário';
+  goStep(1);
+  selectRole('cliente');
+}
+
+// Auto-launch if URL param
+if (params.get('tipo')) {
+  launchApp();
+}
+</script>
+</body>
+</html>
